@@ -23,3 +23,9 @@ table th, table td {
         font-size: 0.9rem;
     }
 }
+
+
+.logo {
+    max-height: 80px;
+    object-fit: contain;
+}

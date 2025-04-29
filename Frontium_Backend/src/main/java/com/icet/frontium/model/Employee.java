@@ -1,7 +1,6 @@
 package com.icet.frontium.model;
 
 import com.icet.frontium.enum_pack.Department;
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

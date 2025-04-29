@@ -1,19 +1,24 @@
-
-// Get modal and form elements
 const editEmployeeModal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));
 const editEmployeeForm = document.getElementById('editEmployeeForm');
 const employeeTableBody = document.getElementById('employeeTableBody');
 
-// Track the current editing employee ID
-let currentEditEmployeeId = null;
 
-// Fetch all employees and populate the table
+let currentEditEmployeeId = null;
+let employeesEmailCheckersArray = [];
+
+function validationChecks() {
+    return fetch('http://localhost:8080/api/employees')
+        .then(res => res.json())
+        .then(data => {
+            employeesEmailCheckersArray = data;
+        });
+}
+
 function fetchEmployees() {
     fetch('http://localhost:8080/api/employees')
         .then(response => response.json())
         .then(data => {
-            employeeTableBody.innerHTML = ''; // Clear table
-
+            employeeTableBody.innerHTML = '';
             data.forEach(employee => {
                 const row = document.createElement('tr');
                 row.setAttribute('data-id', employee.id);
@@ -38,13 +43,13 @@ function fetchEmployees() {
                 employeeTableBody.appendChild(row);
             });
 
-            attachEditButtonListeners();   // Re-attach edit listeners
-            attachDeleteButtonListeners(); // Attach delete listeners
+            attachEditButtonListeners();
+            attachDeleteButtonListeners();
         })
         .catch(error => console.error('Error fetching employees:', error));
 }
 
-// Attach edit button event listeners
+
 function attachEditButtonListeners() {
     const editButtons = document.querySelectorAll('.editBtn');
     editButtons.forEach(button => {
@@ -58,13 +63,22 @@ function attachEditButtonListeners() {
     });
 }
 
-// Handle Save Changes in the edit modal
+
 editEmployeeForm.addEventListener('submit', (submitEvent) => {
     submitEvent.preventDefault();
 
     const updatedName = document.getElementById('editName').value;
     const updatedEmail = document.getElementById('editEmail').value;
     const updatedDepartment = document.getElementById('editDepartment').value;
+
+    const isDuplicate = employeesEmailCheckersArray.some(employee => 
+        employee.email === updatedEmail && employee.id !== currentEditEmployeeId
+    );
+
+    if (isDuplicate) {
+        showToast('error', "Email already in use by another employee.");
+        return;
+    }
 
     fetch(`http://localhost:8080/api/employees/${currentEditEmployeeId}`, {
         method: "PUT",
@@ -89,11 +103,9 @@ editEmployeeForm.addEventListener('submit', (submitEvent) => {
         .catch(error => {
             console.error("Error updating employee:", error);
             showToast('error', "Failed to update employee.");
-            // alert("Failed to update employee.");
         });
 });
 
-// Attach delete button event listeners
 function attachDeleteButtonListeners() {
     const deleteButtons = document.querySelectorAll('.deleteBtn');
     deleteButtons.forEach(button => {
@@ -107,53 +119,57 @@ function attachDeleteButtonListeners() {
             })
                 .then(response => {
                     if (!response.ok) throw new Error("Delete failed");
-                    //alert("Employee deleted successfully!");
-                    showToast('success',"Employee deleted successfully!")
+                    showToast('success', "Employee deleted successfully!")
                     fetchEmployees();
                 })
                 .catch(error => {
                     console.error("Error deleting employee:", error);
-                    //alert("Failed to delete employee.");
-                    showToast('error',"Failed to delete employee.")
+                    showToast('error', "Failed to delete employee.")
                 });
         });
     });
 }
 
-
-// Handle Add Employee form submission
 const addEmployeeForm = document.getElementById('employeeForm');
 
-addEmployeeForm.addEventListener('submit', function (e) {
+addEmployeeForm.addEventListener('submit', async function (e) {
     e.preventDefault();
+
+    await validationChecks(); 
 
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const department = document.getElementById('department').value;
 
-    // Validate Name: Non-empty, alphabetic with spaces, max 100 characters
+
     const nameRegex = /^[a-zA-Z\s]+$/;
     if (!name || !nameRegex.test(name) || name.length > 100) {
-        
-        showToast('error',"Please enter a valid name (alphabetic only, max 100 characters).");
+
+        showToast('error', "Please enter a valid name (alphabetic only, max 100 characters).");
         return;
     }
 
-    // Validate Email with regex pattern
+
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!email || !emailRegex.test(email)) {
-        showToast('error',"Please enter a valid email address.");
+        showToast('error', "Please enter a valid email address.");
         return;
     }
 
-    // Validate Department: Only HR, IT, Finance, Operations
+
     const allowedDepartments = ["HR", "IT", "Finance", "Operations"];
     if (!allowedDepartments.includes(department)) {
-        showToast('error',"Please select a valid department.");
+        showToast('error', "Please select a valid department.");
         return;
     }
 
-    // Proceed with adding the employee if validation passes
+    const isDuplicate = employeesEmailCheckersArray.some(employee => employee.email === email);
+    if (isDuplicate) {
+        showToast('error', "Email already in use.");
+        return; 
+    }
+
+
     fetch("http://localhost:8080/api/employees", {
         method: "POST",
         headers: {
@@ -170,17 +186,16 @@ addEmployeeForm.addEventListener('submit', function (e) {
             return response.json();
         })
         .then(() => {
-            showToast('success',"Employee added successfully!");
-            addEmployeeForm.reset(); // Clear form
-            fetchEmployees(); // Reload employee list
+            showToast('success', "Employee added successfully!");
+            addEmployeeForm.reset();
+            fetchEmployees();
         })
         .catch(error => {
             console.error("Error adding employee:", error);
-            showToast('error',"Failed to add employee.");
+            showToast('error', "Failed to add employee.");
         });
 });
 
-// Function to show Bootstrap toast
 function showToast(type = 'success', message) {
     const toast = new bootstrap.Toast(document.getElementById(`${type}Toast`));
     const toastBody = document.querySelector(`#${type}Toast .toast-body`);
@@ -188,6 +203,7 @@ function showToast(type = 'success', message) {
     toast.show();
 }
 
-
-// Initial load
-document.addEventListener('DOMContentLoaded', fetchEmployees);
+document.addEventListener('DOMContentLoaded', () => {
+    fetchEmployees();
+    validationChecks(); 
+});

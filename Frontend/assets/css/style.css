@@ -1,5 +1,5 @@
-/* Optional custom styles */
 @media (max-width: 767px) {
+    
     #employeeListCard {
         padding: 15px;
     }
@@ -17,7 +17,7 @@ table th, table td {
     text-align: center;
 }
 
-/* Responsive Table */
+
 @media (max-width: 768px) {
     table th, table td {
         font-size: 0.9rem;
